@@ -1,0 +1,354 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arrow Rush | Natik Eye Studio</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+header {
+    height: 75px;
+    padding: 0 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #333;
+}
+
+.brand {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 3px;
+}
+
+.score-box {
+    color: #aaa;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+.score-box strong {
+    color: #fff;
+    font-size: 22px;
+    margin-left: 8px;
+}
+
+#arena {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 75px);
+    overflow: hidden;
+    user-select: none;
+}
+
+#arrow {
+    position: absolute;
+    display: none;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    font-weight: 900;
+    line-height: 1;
+    cursor: default;
+    transform: translate(-50%, -50%);
+    text-shadow: 0 0 20px rgba(255,255,255,0.25);
+    white-space: nowrap;
+}
+
+#arrow.pop {
+    animation: appear 0.12s ease-out;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.back {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    color: #aaa;
+    text-decoration: none;
+    border: 1px solid #444;
+    padding: 10px 14px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    z-index: 2;
+}
+
+.back:hover {
+    background: #fff;
+    color: #000;
+}
+
+#message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(90%, 520px);
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+#message h1 {
+    font-size: clamp(38px, 8vw, 75px);
+    letter-spacing: 5px;
+    margin: 0 0 15px;
+}
+
+#message p {
+    color: #999;
+    font-size: 14px;
+    line-height: 1.8;
+    margin: 0 auto 28px;
+}
+
+button {
+    padding: 15px 32px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #fff;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #000;
+    color: #fff;
+}
+
+#feedback {
+    position: absolute;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: #888;
+    letter-spacing: 2px;
+    text-align: center;
+    pointer-events: none;
+}
+
+#controls {
+    position: absolute;
+    right: 20px;
+    top: 18px;
+    color: #666;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+    header {
+        padding: 0 12px;
+    }
+
+    .brand {
+        font-size: 11px;
+        letter-spacing: 1px;
+    }
+
+    #controls {
+        display: none;
+    }
+
+    .back {
+        top: 12px;
+        left: 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="brand">NATIK EYE STUDIO</div>
+
+    <div class="score-box">
+        SCORE <strong id="score">0</strong>
+    </div>
+</header>
+
+<main id="arena">
+
+    <a class="back" href="index.html">← BACK</a>
+
+    <div id="controls">KEYBOARD: ← LEFT &nbsp; → RIGHT</div>
+
+    <div id="arrow">←</div>
+
+    <section id="message">
+        <h1>ARROW RUSH</h1>
+
+        <p>
+            Test your reaction speed.<br>
+            White arrows will appear at random positions and sizes.<br>
+            Press the matching arrow key on your keyboard.<br>
+            No lives. No chances. Just keep playing!
+        </p>
+
+        <button id="startButton">START GAME</button>
+    </section>
+
+    <div id="feedback">READY WHEN YOU ARE</div>
+
+</main>
+
+<script>
+"use strict";
+
+const arena = document.getElementById("arena");
+const arrow = document.getElementById("arrow");
+const scoreDisplay = document.getElementById("score");
+const message = document.getElementById("message");
+const startButton = document.getElementById("startButton");
+const feedback = document.getElementById("feedback");
+
+let score = 0;
+let running = false;
+let currentDirection = "left";
+let lastDirection = "";
+let feedbackTimer = null;
+
+// Pick a random arrow position and size
+function showNextArrow() {
+    if (!running) return;
+
+    const areaWidth = arena.clientWidth;
+    const areaHeight = arena.clientHeight;
+
+    // Random size: tiny to large
+    const size = 20 + Math.random() * 100;
+
+    // Keep the arrow visible even when it is large
+    const safeX = Math.min(size * 0.8 + 20, areaWidth / 2);
+    const safeY = Math.min(size * 0.8 + 20, areaHeight / 2);
+
+    const x = safeX + Math.random() *
+        Math.max(1, areaWidth - safeX * 2);
+
+    const y = safeY + Math.random() *
+        Math.max(1, areaHeight - safeY * 2);
+
+    // Random direction; avoid repeating the same direction twice
+    let direction;
+
+    if (Math.random() < 0.5) {
+        direction = "left";
+    } else {
+        direction = "right";
+    }
+
+    if (direction === lastDirection) {
+        direction = direction === "left" ? "right" : "left";
+    }
+
+    currentDirection = direction;
+    lastDirection = direction;
+
+    arrow.textContent = direction === "left" ? "←" : "→";
+    arrow.style.fontSize = size + "px";
+    arrow.style.left = x + "px";
+    arrow.style.top = y + "px";
+
+    arrow.style.display = "block";
+
+    // Restart appearance animation
+    arrow.classList.remove("pop");
+    void arrow.offsetWidth;
+    arrow.classList.add("pop");
+
+    feedback.textContent =
+        direction === "left"
+            ? "PRESS  ←  LEFT ARROW"
+            : "PRESS  →  RIGHT ARROW";
+}
+
+// Start game
+function startGame() {
+    score = 0;
+    lastDirection = "";
+
+    scoreDisplay.textContent = score;
+
+    message.style.display = "none";
+    running = true;
+
+    feedback.textContent = "GET READY!";
+
+    showNextArrow();
+}
+
+// Handle keyboard input
+document.addEventListener("keydown", function(event) {
+    if (!running) return;
+
+    if (event.key !== "ArrowLeft" &&
+        event.key !== "ArrowRight") {
+        return;
+    }
+
+    event.preventDefault();
+
+    const pressedDirection =
+        event.key === "ArrowLeft" ? "left" : "right";
+
+    if (pressedDirection === currentDirection) {
+        // Correct key: increase score
+        score++;
+        scoreDisplay.textContent = score;
+
+        feedback.textContent = "✓ CORRECT! +1";
+
+        showNextArrow();
+    } else {
+        // Wrong key: no life or chance penalty
+        feedback.textContent = "WRONG KEY — TRY THE NEXT ONE";
+
+        // Keep the current arrow so the player can try again
+    }
+});
+
+// Start button
+startButton.addEventListener("click", startGame);
+
+// Keyboard shortcut: Enter starts the game
+document.addEventListener("keydown", function(event) {
+    if (!running && event.key === "Enter") {
+        startGame();
+    }
+});
+
+// Handle browser resizing
+window.addEventListener("resize", function() {
+    if (running) {
+        showNextArrow();
+    }
+});
+</script>
+
+</body>
+</html>
+```

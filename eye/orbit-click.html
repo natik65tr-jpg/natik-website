@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Click | Natik Eye Studio</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+.topbar {
+    min-height: 75px;
+    padding: 15px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    border-bottom: 1px solid #333;
+}
+
+.brand {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.stats {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    color: #aaa;
+    font-size: 13px;
+}
+
+.stat strong {
+    color: #fff;
+    margin-left: 6px;
+    font-size: 17px;
+}
+
+#gameArea {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 75px);
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: manipulation;
+}
+
+.back {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 2;
+    color: #fff;
+    text-decoration: none;
+    border: 1px solid #555;
+    padding: 9px 13px;
+    font-size: 12px;
+}
+
+.back:hover {
+    background: #fff;
+    color: #000;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3;
+}
+
+.panel {
+    width: min(420px, 100%);
+    padding: 30px 25px;
+    text-align: center;
+    background: #080808;
+    border: 2px solid #fff;
+    box-shadow: 0 0 35px rgba(255,255,255,0.1);
+}
+
+.panel h1 {
+    margin: 0 0 15px;
+    font-size: clamp(28px, 5vw, 42px);
+    letter-spacing: 3px;
+}
+
+.panel p {
+    color: #bbb;
+    line-height: 1.7;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+button {
+    padding: 14px 25px;
+    border: 2px solid #fff;
+    background: #fff;
+    color: #000;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #000;
+    color: #fff;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.hint {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 95%;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .stats {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    #gameArea {
+        height: calc(100vh - 115px);
+    }
+
+    .stat {
+        font-size: 11px;
+    }
+
+    .stat strong {
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="brand">NATIK EYE STUDIO</div>
+
+    <div class="stats">
+        <div class="stat">ROUND <strong id="round">1 / 5</strong></div>
+        <div class="stat">TARGETS <strong id="targets">6</strong></div>
+        <div class="stat">CHANCES <strong id="chances">10</strong></div>
+        <div class="stat">SCORE <strong id="score">0</strong></div>
+    </div>
+</header>
+
+<main id="gameArea">
+    <a class="back" href="index.html">← WEBSITE</a>
+
+    <canvas id="game"></canvas>
+
+    <div class="hint">
+        CLICK THE SMALL WHITE CIRCLES • MISSED CLICK = -1 CHANCE
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="panel">
+            <h1 id="panelTitle">ORBIT CLICK</h1>
+
+            <p id="panelText">
+                Click all the rotating white circles.
+                You have 10 chances to complete 5 rounds.
+                Each missed click costs one chance!
+            </p>
+
+            <button id="actionButton">START GAME</button>
+        </div>
+    </div>
+</main>
+
+<script>
+"use strict";
+
+// Get HTML elements
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const gameArea = document.getElementById("gameArea");
+const overlay = document.getElementById("overlay");
+
+const panelTitle = document.getElementById("panelTitle");
+const panelText = document.getElementById("panelText");
+const actionButton = document.getElementById("actionButton");
+
+const roundDisplay = document.getElementById("round");
+const targetsDisplay = document.getElementById("targets");
+const chancesDisplay = document.getElementById("chances");
+const scoreDisplay = document.getElementById("score");
+
+// Game settings
+const TOTAL_ROUNDS = 5;
+const START_CHANCES = 10;
+const TAU = Math.PI * 2;
+
+// Canvas dimensions
+let W = 0;
+let H = 0;
+let centerX = 0;
+let centerY = 0;
+let outerRadius = 0;
+let innerRadius = 0;
+
+// Game variables
+let round = 1;
+let chances = START_CHANCES;
+let score = 0;
+let targets = [];
+let angle = 0;
+let speed = 0.6;
+let running = false;
+let roundClearReady = false;
+let missFlash = 0;
+let lastTime = 0;
+
+// Resize canvas
+function resizeCanvas() {
+    const rect = gameArea.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    W = rect.width;
+    H = rect.height;
+
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    centerX = W / 2;
+    centerY = H / 2;
+
+    outerRadius = Math.min(W * 0.34, H * 0.38, 280);
+    outerRadius = Math.max(80, outerRadius);
+
+    innerRadius = outerRadius * 0.22;
+
+    draw();
+}
+
+// Create targets for each round
+function createTargets() {
+    const count = 5 + Math.floor(Math.random() * 2);
+
+    targets = [];
+
+    const minRadius = innerRadius + outerRadius * 0.22;
+    const maxRadius = outerRadius * 0.82;
+
+    for (let i = 0; i < count; i++) {
+        let r;
+        let a;
+        let candidate;
+        let okay;
+        let attempts = 0;
+
+        do {
+            r = minRadius + Math.random() * (maxRadius - minRadius);
+            a = Math.random() * TAU;
+
+            // Bigger white target circles
+            candidate = {
+                r: r,
+                a: a,
+                size: Math.max(12, outerRadius * 0.08)
+            };
+
+            okay = true;
+
+            for (const other of targets) {
+                const dx =
+                    r * Math.cos(a) -
+                    other.r * Math.cos(other.a);
+
+                const dy =
+                    r * Math.sin(a) -
+                    other.r * Math.sin(other.a);
+
+                if (
+                    Math.hypot(dx, dy) <
+                    candidate.size + other.size + 8
+                ) {
+                    okay = false;
+                    break;
+                }
+            }
+
+            attempts++;
+
+        } while (!okay && attempts < 100);
+
+        targets.push(candidate);
+    }
+
+    // Each round has a different rotation speed
+    speed = (Math.random() < 0.5 ? -1 : 1) *
+        (0.5 + (round - 1) * 0.22 + Math.random() * 0.2);
+
+    angle = Math.random() * TAU;
+
+    updateStats();
+}
+
+// Update score and counters
+function updateStats() {
+    roundDisplay.textContent = Math.min(round, TOTAL_ROUNDS) + " / " + TOTAL_ROUNDS;
+    targetsDisplay.textContent = targets.length;
+    chancesDisplay.textContent = chances;
+    scoreDisplay.textContent = score;
+}
+
+// Calculate target position
+function getTargetPosition(target) {
+    const a = target.a + angle;
+
+    return {
+        x: centerX + Math.cos(a) * target.r,
+        y: centerY + Math.sin(a) * target.r
+    };
+}
+
+// Draw the game
+function draw() {
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Black background
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+
+    // Rotating outer ring
+    ctx.save();
+
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, outerRadius, 0, TAU);
+
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Four white marks on the ring
+    for (let i = 0; i < 4; i++) {
+        ctx.save();
+
+        ctx.rotate(i * Math.PI / 2);
+
+        ctx.beginPath();
+        ctx.moveTo(0, -outerRadius);
+        ctx.lineTo(0, -outerRadius + 22);
+
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+
+    // Draw rotating white targets
+    for (const target of targets) {
+        const position = getTargetPosition(target);
+
+        ctx.beginPath();
+        ctx.arc(
+            position.x,
+            position.y,
+            target.size,
+            0,
+            TAU
+        );
+
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+    }
+
+    // Stationary white centre circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, TAU);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+
+    // Flash effect for missed clicks
+    if (missFlash > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${missFlash * 0.12})`;
+        ctx.fillRect(0, 0, W, H);
+    }
+}
+
+// Show start, win, or game-over panel
+function showPanel(title, message, buttonText) {
+    panelTitle.textContent = title;
+    panelText.textContent = message;
+    actionButton.textContent = buttonText;
+
+    overlay.classList.remove("hidden");
+}
+
+// Hide panel
+function hidePanel() {
+    overlay.classList.add("hidden");
+}
+
+// Start a new game
+function startGame() {
+    round = 1;
+    chances = START_CHANCES;
+    score = 0;
+    missFlash = 0;
+    roundClearReady = false;
+
+    createTargets();
+
+    running = true;
+    lastTime = performance.now();
+
+    updateStats();
+    hidePanel();
+    draw();
+}
+
+// Finish the game
+function endGame(won) {
+    running = false;
+    roundClearReady = false;
+
+    if (won) {
+        showPanel(
+            "YOU WIN!",
+            "Amazing! You completed all 5 rounds. Final score: " + score,
+            "PLAY AGAIN"
+        );
+    } else {
+        showPanel(
+            "GAME OVER",
+            "You ran out of chances. Your final score is " + score + ".",
+            "RESTART GAME"
+        );
+    }
+}
+
+// Complete current round
+function completeRound() {
+    running = false;
+
+    if (round >= TOTAL_ROUNDS) {
+        endGame(true);
+        return;
+    }
+
+    const finishedRound = round;
+    round++;
+
+    roundClearReady = true;
+
+    showPanel(
+        "ROUND " + finishedRound + " CLEAR!",
+        "Great job! Round " + round +
+        " will have new target positions and a different rotation speed.",
+        "NEXT ROUND"
+    );
+
+    updateStats();
+}
+
+// Start the next round
+function nextRound() {
+    roundClearReady = false;
+
+    createTargets();
+
+    running = true;
+    lastTime = performance.now();
+
+    hidePanel();
+    updateStats();
+    draw();
+}
+
+// Handle mouse or touchscreen clicks
+function handleClick(event) {
+    if (!running) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    let hitIndex = -1;
+
+    // Check whether a target was clicked
+    for (let i = targets.length - 1; i >= 0; i--) {
+        const position = getTargetPosition(targets[i]);
+
+        const distance = Math.hypot(
+            x - position.x,
+            y - position.y
+        );
+
+        if (distance <= targets[i].size + 4) {
+            hitIndex = i;
+            break;
+        }
+    }
+
+    if (hitIndex !== -1) {
+        // Target hit
+        targets.splice(hitIndex, 1);
+
+        score += 10;
+
+        updateStats();
+
+        // Complete round when all targets are removed
+        if (targets.length === 0) {
+            completeRound();
+        }
+    } else {
+        // Missed click costs one chance
+        chances--;
+        missFlash = 1;
+
+        updateStats();
+
+        if (chances <= 0) {
+            endGame(false);
+        }
+    }
+
+    draw();
+}
+
+// Animation loop
+function animate(time) {
+    const delta = Math.min(0.04, (time - lastTime) / 1000 || 0);
+
+    lastTime = time;
+
+    if (running) {
+        angle += speed * delta;
+
+        missFlash = Math.max(0, missFlash - delta * 5);
+
+        draw();
+    }
+
+    requestAnimationFrame(animate);
+}
+
+// Button controls
+actionButton.addEventListener("click", function() {
+    if (roundClearReady) {
+        nextRound();
+    } else {
+        startGame();
+    }
+});
+
+// Click targets
+canvas.addEventListener("pointerdown", handleClick);
+
+// Resize support
+window.addEventListener("resize", resizeCanvas);
+
+// Initialize game
+resizeCanvas();
+updateStats();
+
+requestAnimationFrame(function(time) {
+    lastTime = time;
+    requestAnimationFrame(animate);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natik Eye Studio</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #070711;
+            --card: rgba(255, 255, 255, 0.055);
+            --purple: #a855f7;
+            --pink: #ff3cac;
+            --blue: #00d4ff;
+            --text: #f7f4ff;
+            --muted: #aaa7c0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .background {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+            background:
+                radial-gradient(ellipse at 20% 20%, #36105b 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 70%, #082d52 0%, transparent 40%),
+                #070711;
+        }
+
+        .orb {
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.35;
+            animation: float 12s ease-in-out infinite alternate;
+        }
+
+        .orb.one {
+            background: var(--purple);
+            top: 5%;
+            left: -100px;
+        }
+
+        .orb.two {
+            background: var(--blue);
+            right: -100px;
+            bottom: 5%;
+            animation-delay: -5s;
+        }
+
+        .orb.three {
+            background: var(--pink);
+            top: 45%;
+            left: 40%;
+            width: 200px;
+            height: 200px;
+            animation-delay: -8s;
+        }
+
+        @keyframes float {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(90px, -60px) scale(1.2); }
+        }
+
+        /* Navigation */
+        nav {
+            width: min(1150px, 92%);
+            margin: auto;
+            padding: 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .logo span {
+            background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: white;
+        }
+
+        /* Hero */
+        .hero {
+            width: min(1050px, 92%);
+            margin: auto;
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 75px 0 90px;
+        }
+
+        .badge {
+            padding: 9px 17px;
+            border: 1px solid #a855f755;
+            border-radius: 50px;
+            background: #a855f714;
+            color: #dfb9ff;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+        }
+
+        h1 {
+            font-size: clamp(45px, 8vw, 92px);
+            line-height: 1.05;
+            letter-spacing: -4px;
+            font-weight: 900;
+        }
+
+        h1 span {
+            background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p {
+            max-width: 620px;
+            color: var(--muted);
+            font-size: 17px;
+            line-height: 1.8;
+            margin: 25px 0 32px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .primary-button,
+        .secondary-button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 9px;
+            padding: 15px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 15px;
+            transition: transform 0.25s, box-shadow 0.25s;
+            cursor: pointer;
+        }
+
+        .primary-button {
+            color: white;
+            background: linear-gradient(100deg, #a855f7, #7138ff);
+            border: 1px solid #ffffff30;
+            box-shadow: 0 0 25px #a855f733;
+        }
+
+        .secondary-button {
+            color: white;
+            background: #ffffff0a;
+            border: 1px solid #ffffff25;
+        }
+
+        .primary-button:hover,
+        .secondary-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 35px #a855f744;
+        }
+
+        /* Sections */
+        section.content {
+            width: min(1050px, 92%);
+            margin: 0 auto;
+            padding: 50px 0 80px;
+            scroll-margin-top: 30px;
+        }
+
+        .section-heading {
+            text-align: center;
+            margin-bottom: 38px;
+        }
+
+        .section-heading h2 {
+            font-size: clamp(28px, 5vw, 42px);
+            margin-bottom: 12px;
+        }
+
+        .section-heading p {
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            padding: 28px;
+            border: 1px solid #ffffff13;
+            border-radius: 20px;
+            background: var(--card);
+            backdrop-filter: blur(15px);
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-7px);
+            border-color: #a855f777;
+        }
+
+        .icon {
+            width: 55px;
+            height: 55px;
+            display: grid;
+            place-items: center;
+            font-size: 27px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #a855f733, #00d4ff22);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 14px;
+            margin-bottom: 22px;
+        }
+
+        .card .primary-button,
+        .card .secondary-button {
+            padding: 12px 16px;
+            font-size: 13px;
+        }
+
+        .status {
+            display: inline-block;
+            font-size: 11px;
+            padding: 6px 10px;
+            color: #80ffcc;
+            background: #00ff9915;
+            border: 1px solid #00ff9933;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+
+        footer {
+            text-align: center;
+            border-top: 1px solid #ffffff12;
+            padding: 28px 15px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        footer span {
+            color: #d59aff;
+        }
+
+        @media (max-width: 750px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                gap: 13px;
+            }
+
+            .nav-links a {
+                font-size: 12px;
+            }
+
+            h1 {
+                letter-spacing: -2px;
+            }
+
+            .hero {
+                min-height: 60vh;
+            }
+        }
+
+        @media (max-width: 420px) {
+            nav {
+                align-items: flex-start;
+            }
+
+            .logo {
+                font-size: 20px;
+            }
+
+            .nav-links {
+                gap: 10px;
+            }
+
+            .nav-links a {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background">
+        <div class="orb one"></div>
+        <div class="orb two"></div>
+        <div class="orb three"></div>
+    </div>
+
+    <nav>
+        <div class="logo">NATIK <span>EYE STUDIO</span></div>
+
+        <div class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#games">Games</a>
+            <a href="#about">About</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero" id="home">
+            <div class="badge">✦ Your Digital Playground</div>
+
+            <h1>Welcome to<br><span>Natik Eye Studio</span></h1>
+
+            <p>
+                Explore a neon-powered digital playground.
+                Discover games, experiment with ideas, and enjoy
+                a unique experience built for you.
+            </p>
+
+            <div class="buttons">
+                <a href="#games" class="primary-button">🚀 Explore Games</a>
+                <a href="#about" class="secondary-button">✨ About Studio</a>
+            </div>
+        </section>
+
+        <section class="content" id="games">
+            <div class="section-heading">
+                <h2>🎮 Game Zone</h2>
+                <p>Choose your next challenge and start playing.</p>
+            </div>
+
+            <div class="grid">
+                <article class="card">
+                    <div class="icon">🏓</div>
+                    <span class="status">● READY TO PLAY</span>
+                    <h3>Neon Pong</h3>
+                    <p>
+                        Challenge the AI in a glowing arcade game.
+                        Move your mouse up and down to control your paddle.
+                        Reach 20 hits to win!
+                    </p>
+                    <a href="pong.html" class="primary-button">🏓 Play Pong</a>
+                </article>
+
+                <article class="card">
+    <div class="icon">⚪</div>
+    <span class="status">✦ READY TO PLAY</span>
+    <h3>Orbit Click</h3>
+    <p>
+        Test your aim and timing! Click the rotating white circles,
+        survive with 10 chances, and complete all 5 rounds.
+    </p>
+    <a href="orbit-click.html" class="primary-button">
+        ⚪ Play Orbit Click
+    </a>
+</article>
+                    </a>
+                </article>
+
+                <article class="card">
+              
+<article class="card">
+    <div class="icon">⬅️</div>
+    <span class="status">✦ READY TO PLAY</span>
+
+    <h3>Arrow Rush</h3>
+
+    <p>
+        Test your reaction speed! Follow the random white arrows,
+        press the correct keyboard key, and beat your high score.
+    </p>
+
+    <a href="arrow-rush.html" class="primary-button">
+        ⚡ Play Arrow Rush
+    </a>
+</article>
+  
+
+            </div>
+        </section>
+
+        <section class="content" id="about">
+            <div class="section-heading">
+                <h2>✨ About the Studio</h2>
+                <p>A creative space for games, experiments, and ideas.</p>
+            </div>
+
+            <div class="card">
+                <div class="icon">🌌</div>
+                <h3>Built for Fun</h3>
+                <p>
+                    Natik Eye Studio is your personal digital playground.
+                    The experience combines a neon-inspired interface,
+                    smooth animations, and interactive projects.
+                    More features and games can be added as the studio grows.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Made with <span>♥</span> by Natik Eye Studio · © <span id="year"></span>
+    </footer>
+
+    <script>
+        document.getElementById("year").textContent =
+            new Date().getFullYear();
+    </script>
+</body>
+</html>

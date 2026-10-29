@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black & White Pong | Natik Eye Studio</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px 0;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+h1 {
+    font-size: clamp(24px, 5vw, 44px);
+    letter-spacing: 4px;
+    text-align: center;
+    margin: 0 10px 12px;
+}
+
+.subtitle {
+    color: #bbb;
+    text-align: center;
+    margin: 0 15px 18px;
+    line-height: 1.6;
+}
+
+#score {
+    font-size: 23px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin-bottom: 15px;
+}
+
+#game {
+    display: block;
+    width: min(94vw, 900px);
+    height: auto;
+    background: #000;
+    border: 2px solid #fff;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+}
+
+.panel {
+    text-align: center;
+    max-width: 500px;
+}
+
+.panel h2 {
+    font-size: clamp(36px, 6vw, 56px);
+    margin: 0 0 20px;
+}
+
+.panel p {
+    color: #ccc;
+    line-height: 1.8;
+    margin-bottom: 25px;
+}
+
+button {
+    padding: 15px 30px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #000;
+    color: #fff;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.back {
+    margin-top: 20px;
+    color: #fff;
+    text-decoration: none;
+    border: 1px solid #555;
+    padding: 10px 16px;
+}
+
+.back:hover {
+    background: #fff;
+    color: #000;
+}
+</style>
+</head>
+
+<body>
+
+<h1>BLACK &amp; WHITE PONG</h1>
+
+<p class="subtitle">
+Move your mouse up or down inside the game to control BOTH paddles.
+</p>
+
+<div id="score">Hits: 0 / 20</div>
+
+<canvas id="game" width="900" height="500"></canvas>
+
+<a class="back" href="index.html">← Back to Natik Eye Studio</a>
+
+<div id="overlay">
+    <div class="panel">
+        <h2 id="title">PONG</h2>
+
+        <p id="description">
+            Both white paddles follow your mouse together.<br>
+            Hit the ball 20 times to win!
+        </p>
+
+        <button id="startButton" type="button">
+            START GAME
+        </button>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+// Get HTML elements
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreDisplay = document.getElementById("score");
+const overlay = document.getElementById("overlay");
+const title = document.getElementById("title");
+const description = document.getElementById("description");
+const startButton = document.getElementById("startButton");
+
+// Game settings
+const W = canvas.width;
+const H = canvas.height;
+
+const paddleWidth = 12;
+const paddleHeight = 100;
+const paddleMargin = 30;
+const ballRadius = 9;
+const targetHits = 20;
+
+// Game variables
+let leftY = (H - paddleHeight) / 2;
+let rightY = (H - paddleHeight) / 2;
+
+let ballX = W / 2;
+let ballY = H / 2;
+let ballVX = 5;
+let ballVY = 2;
+
+let hits = 0;
+let running = false;
+let animationId = null;
+let lastHitPaddle = "";
+
+// Reset ball position and direction
+function resetBall(direction) {
+    ballX = W / 2;
+    ballY = H / 2;
+    ballVX = 5 * direction;
+    ballVY = Math.random() * 4 - 2;
+    lastHitPaddle = "";
+}
+
+// Draw the game
+function draw() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+
+    // Centre line
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 12]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Left paddle
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(
+        paddleMargin,
+        leftY,
+        paddleWidth,
+        paddleHeight
+    );
+
+    // Right paddle
+    ctx.fillRect(
+        W - paddleMargin - paddleWidth,
+        rightY,
+        paddleWidth,
+        paddleHeight
+    );
+
+    // Ball
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Update game physics
+function update() {
+    if (!running) return;
+
+    ballX += ballVX;
+    ballY += ballVY;
+
+    // Bounce off top and bottom walls
+    if (ballY - ballRadius <= 0) {
+        ballY = ballRadius;
+        ballVY = Math.abs(ballVY);
+    }
+
+    if (ballY + ballRadius >= H) {
+        ballY = H - ballRadius;
+        ballVY = -Math.abs(ballVY);
+    }
+
+    // Left paddle collision
+    if (
+        ballVX < 0 &&
+        ballX - ballRadius <= paddleMargin + paddleWidth &&
+        ballX - ballRadius >= paddleMargin - 10 &&
+        ballY + ballRadius >= leftY &&
+        ballY - ballRadius <= leftY + paddleHeight &&
+        lastHitPaddle !== "left"
+    ) {
+        ballX = paddleMargin + paddleWidth + ballRadius;
+        ballVX = Math.abs(ballVX) + 0.1;
+
+        ballVY =
+            ((ballY - (leftY + paddleHeight / 2)) /
+            (paddleHeight / 2)) * 5;
+
+        hits++;
+        lastHitPaddle = "left";
+    }
+
+    // Right paddle collision
+    if (
+        ballVX > 0 &&
+        ballX + ballRadius >= W - paddleMargin - paddleWidth &&
+        ballX + ballRadius <= W - paddleMargin + 10 &&
+        ballY + ballRadius >= rightY &&
+        ballY - ballRadius <= rightY + paddleHeight &&
+        lastHitPaddle !== "right"
+    ) {
+        ballX = W - paddleMargin - paddleWidth - ballRadius;
+        ballVX = -Math.abs(ballVX) - 0.1;
+
+        ballVY =
+            ((ballY - (rightY + paddleHeight / 2)) /
+            (paddleHeight / 2)) * 5;
+
+        hits++;
+        lastHitPaddle = "right";
+    }
+
+    // Reset hit lock after the ball crosses the field
+    if (
+        ballX > paddleMargin + paddleWidth + 25 &&
+        ballX < W - paddleMargin - paddleWidth - 25
+    ) {
+        lastHitPaddle = "";
+    }
+
+    // Update score
+    scoreDisplay.textContent =
+        "Hits: " + hits + " / " + targetHits;
+
+    // Win after 20 hits
+    if (hits >= targetHits) {
+        finishGame(true);
+        return;
+    }
+
+    // End game if ball misses
+    if (ballX < 0 || ballX > W) {
+        finishGame(false);
+    }
+}
+
+// Animation loop
+function gameLoop() {
+    if (!running) return;
+
+    update();
+    draw();
+
+    if (running) {
+        animationId = requestAnimationFrame(gameLoop);
+    }
+}
+
+// Start or restart game
+function startGame() {
+    if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+    }
+
+    animationId = null;
+    hits = 0;
+
+    leftY = (H - paddleHeight) / 2;
+    rightY = (H - paddleHeight) / 2;
+
+    resetBall(Math.random() < 0.5 ? -1 : 1);
+
+    scoreDisplay.textContent = "Hits: 0 / " + targetHits;
+
+    overlay.classList.add("hidden");
+
+    running = true;
+
+    draw();
+    gameLoop();
+}
+
+// Show end screen
+function finishGame(won) {
+    running = false;
+    animationId = null;
+
+    title.textContent = won ? "YOU WIN!" : "GAME OVER";
+
+    description.textContent = won
+        ? "Congratulations! You reached 20 hits."
+        : "The ball missed a paddle. Try again!";
+
+    startButton.textContent = "PLAY AGAIN";
+
+    overlay.classList.remove("hidden");
+}
+
+// Control both paddles with mouse
+function movePaddles(clientY) {
+    const rect = canvas.getBoundingClientRect();
+
+    const mouseY =
+        (clientY - rect.top) * (H / rect.height);
+
+    const newY = Math.max(
+        0,
+        Math.min(
+            H - paddleHeight,
+            mouseY - paddleHeight / 2
+        )
+    );
+
+    leftY = newY;
+    rightY = newY;
+}
+
+canvas.addEventListener("mousemove", function(event) {
+    movePaddles(event.clientY);
+});
+
+// Touch support
+canvas.addEventListener("touchstart", function(event) {
+    if (event.touches.length > 0) {
+        movePaddles(event.touches[0].clientY);
+    }
+}, { passive: true });
+
+canvas.addEventListener("touchmove", function(event) {
+    event.preventDefault();
+
+    if (event.touches.length > 0) {
+        movePaddles(event.touches[0].clientY);
+    }
+}, { passive: false });
+
+// Start button
+startButton.addEventListener("click", function() {
+    startGame();
+});
+
+// Draw the initial screen
+draw();
+</script>
+
+</body>
+</html>
